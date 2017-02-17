@@ -1,0 +1,39 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-validator-behavior/iron-validator-behavior.html">
+
+<script>
+  Polymer({
+    is: 'bb-input-price-validator',
+
+    behaviors: [
+      Polymer.IronValidatorBehavior
+    ],
+    properties: {
+      pricePattern: {
+        type: String,
+        value: function() {
+          return /(^[1-9]\d{0,2})(?:\,\d{3})*/;
+        }
+      }
+    },
+    // validate the value.
+    validate: function(value) {
+      var errCode = '';
+      var valid = false;
+
+      if (this.pricePattern) {
+        var regexp = new RegExp(this.pricePattern);
+
+        valid = regexp.test( value ) ? true: false;
+        errCode = !valid ? 'invalid-value' : '';
+        regexp = null;
+      }
+
+      // announce error-message
+      if (!valid) {
+        this.fire('bb-input-price-error', {code: errCode});
+      }
+      return valid;
+    }
+  });
+</script>

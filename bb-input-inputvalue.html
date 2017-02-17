@@ -1,0 +1,224 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../iron-validatable-behavior/iron-validatable-behavior.html">
+<link rel="import" href="bb-input-price-validator.html">
+
+<dom-module id="bb-input-inputvalue">
+  <template>
+    <style>
+      :host {
+          display: inline-block;
+      }
+      :host([hidden]) {
+          display: none !important;
+      }
+      label.input-label {
+          position: absolute;
+          top: 0;
+          right: 0;
+          left: 0;
+          width: 100%;
+          font: inherit;
+          color: var(--paper-input-container-color, --secondary-text-color);
+          -webkit-transition: -webkit-transform 0.25s, width 0.25s;
+          transition: transform 0.25s, width 0.25s;
+          -webkit-transform-origin: left top;
+          transform-origin: left top;
+
+          @apply(--paper-font-common-nowrap);
+          @apply(--paper-font-subhead);
+          @apply(--paper-input-container-label);
+          @apply(--paper-transition-easing);
+       }
+       label.input-label.label-is-floating {
+         	position: absolute;
+         	-webkit-transform: translateY(-75%) scale(0.0);
+          transform: translateY(-75%) scale(0.0);
+
+          /* Since we scale to 75/100 of the size, we actually have 100/75 of the
+          original space now available  */
+          width: 133%;
+          @apply(--paper-input-container-label-floating);
+       }
+       input[is="iron-input"] {
+           position: relative; /* to make a stacking context */
+           outline: none;
+           box-shadow: none;
+           padding: 0;
+           width: 100%;
+           max-width: 100%;
+           background: transparent;
+           border: none;
+           color: var(--paper-input-container-input-color, --primary-text-color);
+           -webkit-appearance: none;
+           text-align: right;
+           vertical-align: bottom;
+           padding-left: 2px;
+           @apply(--paper-font-subhead);
+           @apply(--paper-input-container-input);
+       }
+
+      .container {
+        @apply(--layout-horizontal);
+        align-items: center;
+      }
+
+
+    </style>
+    <bb-input-price-validator></bb-input-price-validator>
+    <div class="container">
+        <label class$="[[_computedLabelClass(value)]]" for="inputValue">[[priceLabel]]</label>
+        <input is="iron-input"
+                id="inputValue"
+                type="text"
+                maxlength$="[[maxlength]]"
+                prevent-invalid-input
+                allowed-pattern="[0-9,]"
+                on-change="_onChange"
+                bind-value="{{value}}"
+                invalid="{{invalid}}"></input>
+                <!-- on-input="_onInput"
+                on-keypress="_onKeypress" -->
+    </div>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'bb-input-inputvalue',
+      behaviors: [
+        Polymer.IronValidatableBehavior
+      ],
+      properties: {
+        value: {
+          notify: true,
+          type: String,
+          reflectToAttribute: true
+        },
+        validator: {
+          type: String,
+          value: 'bb-input-price-validator'
+        },
+        required: {
+          type: Boolean
+        },
+        _validator: {
+          type: Object,
+          computed: '__computeValidator(validator)'
+        }
+      },
+      attached: function() {
+        // override
+        this.$$('input').__proto__._onInput= this._onInput;
+      },
+
+      /**
+       * Adding a class-name to the classList of the label
+       * to make a label floating or nofloating.
+       *
+       * @param {Boolean} _inputHasContent True if the input-value exists,
+       */
+      _computedLabelClass: function(_inputHasContent) {
+          var cls = 'input-label';
+          if (_inputHasContent) {
+            cls += ' label-is-floating';
+          }
+          return cls;
+      },
+      /**
+       * Returns true if the `value` is valid, and updates `invalid`. If you want
+       * your element to have custom validation logic, do not override this method;
+       * override `_getValidity(value)` instead.
+
+       * @param {Object} value The value to be validated. By default, it is passed
+       * to the validator's `validate()` function, if a validator is set.
+       * @return {boolean} True if `value` is valid.
+       */
+      validate: function(value) {
+        this.invalid = !this._getValidity(value);
+        return !this.invalid;
+      },
+
+      /**
+       * Returns true if `value` is valid.  By default, it is passed
+       * to the validator's `validate()` function, if a validator is set. You
+       * should override this method if you want to implement custom validity
+       * logic for your element.
+       *
+       * @param {Object} value The value to be validated.
+       * @return {boolean} True if `value` is valid.
+       */
+
+      _getValidity: function(value) {
+        if (this.hasValidator()) {
+          return this._validator.validate(value);
+        }
+        return true;
+      },
+      __computeValidator: function() {
+        return Polymer.IronValidatableBehaviorMeta &&
+            Polymer.IronValidatableBehaviorMeta.byKey(this.validator);
+      },
+      _onChange:function(event) {
+
+
+        // In the Shadow DOM, the `change` event is not leaked into the
+        // ancestor tree, so we must do this manually.
+        // See https://w3c.github.io/webcomponents/spec/shadow/#events-that-are-not-leaked-into-ancestor-trees.
+        if (this.shadowRoot) {
+          this.fire(event.type, {sourceEvent: event}, {
+            node: this,
+            bubbles: event.bubbles,
+            cancelable: event.cancelable
+          });
+        }
+      },
+      _onInput: function() {
+        // console.log('oninput begin='+this.value);
+        // Need to validate each of the characters pasted if they haven't
+        // been validated inside `_onKeypress` already.
+        if (this.preventInvalidInput && !this._patternAlreadyChecked) {
+          var valid = this._checkPatternValidity();
+          if (!valid) {
+            this._announceInvalidCharacter('Invalid string of characters not entered.');
+            this.value = this._previousValidInput;
+          }
+        }
+
+        var tmpValue = this.value;
+        // defalut '0'
+        if(tmpValue == '') {
+          this.value = '0';
+          return;
+        }
+        // remove comma sign.
+        if(tmpValue.indexOf(',') > -1) {
+          tmpValue = tmpValue.replace(',','',-1);
+        }
+        // remove begin with '0' character.
+        while(tmpValue.length > 1 && tmpValue.indexOf('0') == 0) {
+          tmpValue = tmpValue.replace('0','');
+          this.value = tmpValue;
+        }
+
+
+
+        if(tmpValue.length > 3){
+          var V = tmpValue;
+          V = V.replace(/,/g,'');
+          var R = new RegExp('(-?[0-9]+)([0-9]{3})');
+          while(R.test(V))
+          {
+              V = V.replace(R, '$1,$2');
+          }
+          this.value = V;
+        }
+
+        this.bindValue = this.value;
+        this._previousValidInput = this.value;
+        this._patternAlreadyChecked = false;
+      },
+
+    });
+  </script>
+</dom-module>

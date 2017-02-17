@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+  <head>
+    <title>bb-input-price demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+    <link rel="import" href="../bb-input-price.html">
+    <link rel="import" href="../../paper-icon-button/paper-icon-button.html">
+    <link rel="import" href="../../paper-button/paper-button.html">
+    <link rel="import" href="../../paper-spinner/paper-spinner.html">
+    <link rel="import" href="../../iron-flex-layout/iron-flex-layout.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+    <link rel="import" href="../../iron-form/iron-form.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+
+    </style>
+  </head>
+  <body>
+
+    <div class="vertical-section-container centered">
+      <h3>Basic bb-input-price Demo</h3>
+      <demo-snippet>
+        <template>
+          <div class="card" >
+              <form is="iron-form" method="get" action="/" id="eventsDemo" >
+                <paper-button raised onclick="_loadMain(event)">Initialization</paper-button>
+                <bb-input-price
+                      id="inputPrice"
+                      label="Price"
+                      show-value
+                      required
+                      maxlength="11"
+                      minlength="1"
+                      default="0"
+                      price-label="Price"
+                      >
+                      <div prefix>&#8361;</div>
+                      <iron-icon hidden$="[[!_showClearIcon(inputPrice.value)]]" class="clear" suffix icon="icons:clear" onclick="_clearInput(event)" alt="clear" title="clear" ></iron-icon>
+                </bb-input-price>
+                <paper-button raised id="setValue" onclick="clickMe(event)">Set price</paper-button>
+                <!-- Submit and Reset for form -->
+                <paper-button raised onclick="_delayedSubmit(event)" disabled id="eventsDemoSubmit">
+                  <paper-spinner id="spinner" hidden></paper-spinner>Submit</paper-button>
+                <paper-button raised onclick="_reset(event)">Reset</paper-button>
+
+                <div class="output"></div>
+              </form>
+
+          </div>
+        </template>
+      </demo-snippet>
+    </div>
+
+    <script>
+        function _loadMain(event) {
+          eventsDemo.addEventListener('change', function(event) {
+            // Validate the entire form to see if we should enable the `Submit` button.
+            eventsDemoSubmit.disabled = !eventsDemo.validate();
+          });
+
+          eventsDemo.addEventListener('iron-form-submit', function(event) {
+            spinner.active = false;
+            spinner.hidden = true;
+            eventsDemoSubmit.disabled = false;
+            this.querySelector('.output').innerHTML = JSON.stringify(event.detail);
+          });
+
+          document.getElementById('inputPrice').addEventListener('bb-input-price-error',function (event) {
+            var msg = '';
+            console.log(event.detail.code); // true
+
+            if(event.detail.code == 'invalid-value') {
+              msg= 'Price is invalid.';
+              document.getElementById('inputPrice').setAttribute('error-message',msg);
+            }
+          });
+
+        }
+
+        function _delayedSubmit(event) {
+          spinner.active = true;
+          spinner.hidden = false;
+          eventsDemoSubmit.disabled = true;
+          // Simulate a slow server response.
+          setTimeout(function() {
+            Polymer.dom(event).localTarget.parentElement.submit();
+          }, 1000);
+        }
+
+        function _reset(event) {
+          var form = Polymer.dom(event).localTarget.parentElement;
+          form.reset();
+          form.querySelector('.output').innerHTML = '';
+        }
+
+        function clickMe(event) {
+          document.getElementById('inputPrice').value = '1,234,567';
+        }
+
+        function _clearInput(event) {
+          document.getElementById('inputPrice').clearPrice();
+        }
+
+        function _showClearIcon(val) {
+          return inputPrice._inputHasContent(val);
+        }
+
+    </script>
+  </body>
+</html>
